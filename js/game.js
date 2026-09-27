@@ -1,3 +1,57 @@
+// Persistence: prefer the real Node/SQLite backend (the Termux dev server)
+// when it answers; fall back to localStorage automatically when there's no
+// server to reach it — e.g. a static GitHub Pages deployment. This means
+// the same client code works unmodified in both environments, rather than
+// needing to hand-patch save/load/reset every time this gets exported to
+// a static host.
+const Persistence = {
+  key: 'nook-lumina-run-save',
+  async load() {
+    try {
+      const res = await fetch('/api/save');
+      if (!res.ok) throw new Error('no server');
+      const rows = await res.json();
+      if (!rows || rows.length === 0) return null;
+      const r = rows[0];
+      return {
+        level: r.level,
+        unlockedLevels: r.unlocked_levels || r.level || 1,
+        checkpoint: r.checkpoint,
+        score: r.score,
+        crystals: r.crystals,
+        health: r.health
+      };
+    } catch (e) {
+      try {
+        const saved = localStorage.getItem(this.key);
+        return saved ? JSON.parse(saved) : null;
+      } catch (e2) {
+        return null;
+      }
+    }
+  },
+  async save(data) {
+    try {
+      const res = await fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('no server');
+    } catch (e) {
+      try { localStorage.setItem(this.key, JSON.stringify(data)); } catch (e2) {}
+    }
+  },
+  async reset() {
+    try {
+      const res = await fetch('/api/reset', { method: 'POST' });
+      if (!res.ok) throw new Error('no server');
+    } catch (e) {
+      try { localStorage.removeItem(this.key); } catch (e2) {}
+    }
+  }
+};
+
 class Game {
   constructor(canvas) {
     this.canvas = canvas;
@@ -31,12 +85,26 @@ class Game {
 
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    // Some Android browsers report stale window dimensions for a moment
+    // right after rotation, before the layout has actually settled — a
+    // second resize shortly after the event fires catches that case.
+    window.addEventListener('orientationchange', () => {
+      this.resize();
+      setTimeout(() => this.resize(), 150);
+    });
     this.setupInputs();
   }
 
   resize() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
+    // visualViewport reflects the actual visible area more accurately than
+    // window.innerWidth/innerHeight on many Android browsers (dynamic
+    // toolbars, on-screen keyboard, some notch/cutout handling).
+    const vv = window.visualViewport;
+    const w = vv ? Math.round(vv.width) : window.innerWidth;
+    const h = vv ? Math.round(vv.height) : window.innerHeight;
+    if (w <= 0 || h <= 0) return;
+    this.canvas.width = w;
+    this.canvas.height = h;
     this.camera.resize(this.canvas.width, this.canvas.height);
   }
 
@@ -67,9 +135,7 @@ class Game {
 
   async loadProgress() {
     try {
-      const saved = localStorage.getItem('nook-lumina-run-save');
-      const p = saved ? JSON.parse(saved) : null;
-
+      const p = await Persistence.load();
       if (p) {
         this.currentLevelNum = Math.min(Math.max(p.level || 1, 1), 3);
         this.unlockedLevels = Math.max(this.unlockedLevels, p.unlockedLevels || this.currentLevelNum);
@@ -202,16 +268,17 @@ class Game {
   }
 
   resetProgress() {
-    localStorage.removeItem('nook-lumina-run-save');
-    this.unlockedLevels = 1;
-    this.currentLevelNum = 1;
-    this.currentCheckpoint = 0;
-    this.loadLevel(1, false);
-    this.state = 'MENU';
-    this.menu.showMain();
-    this.menu.updateLevelSelect(1);
-    document.getElementById('btn-continue').style.opacity = '0.4';
-    document.getElementById('btn-continue').style.pointerEvents = 'none';
+    Persistence.reset().then(() => {
+      this.unlockedLevels = 1;
+      this.currentLevelNum = 1;
+      this.currentCheckpoint = 0;
+      this.loadLevel(1, false);
+      this.state = 'MENU';
+      this.menu.showMain();
+      this.menu.updateLevelSelect(1);
+      document.getElementById('btn-continue').style.opacity = '0.4';
+      document.getElementById('btn-continue').style.pointerEvents = 'none';
+    });
   }
 
   startTransition(callback) {
@@ -339,12 +406,7 @@ class Game {
       crystals: this.crystals,
       health: this.health
     };
-
-    try {
-      localStorage.setItem('nook-lumina-run-save', JSON.stringify(data));
-    } catch (e) {
-      console.log('Unable to save progress:', e);
-    }
+    Persistence.save(data);
   }
 
   draw() {
@@ -385,7 +447,7 @@ class Game {
     ctx.restore();
 
     // HUD
-    this.hud.draw(ctx, this.health, this.maxHealth, this.crystals, this.score, this.currentCheckpoint, this.currentLevelNum, this.player.shieldTime);
+    this.hud.draw(ctx, this.health, this.maxHealth, this.crystals, this.score, this.currentCheckpoint, this.currentLevelNum, this.player.shieldTime, this.canvas.width);
 
     // Transition overlay
     if (this.transitioning) {

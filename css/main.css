@@ -29,6 +29,7 @@ html, body {
   justify-content: center;
   pointer-events: none;
   z-index: 10;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
 }
 
 .menu-container {
@@ -38,6 +39,8 @@ html, body {
   padding: 48px 40px;
   min-width: 300px;
   max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
   text-align: center;
   pointer-events: all;
   backdrop-filter: blur(20px);
@@ -225,12 +228,13 @@ input[type="checkbox"] { width: 22px; height: 22px; accent-color: #D66A45; curso
 
 .mobile-controls {
   position: absolute;
-  bottom: 24px; left: 0;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  left: 0;
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  padding: 0 24px;
+  padding: 0 calc(24px + env(safe-area-inset-right, 0px)) 0 calc(24px + env(safe-area-inset-left, 0px));
   pointer-events: none;
   z-index: 5;
 }

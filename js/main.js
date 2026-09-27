@@ -11,11 +11,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target === canvas) e.preventDefault();
   }, { passive: false });
 
-  const saved = localStorage.getItem('nook-lumina-run-save');
-  const btn = document.getElementById('btn-continue');
+  const saved = await Persistence.load();
+  const continueBtn = document.getElementById('btn-continue');
   if (!saved) {
-    btn.style.opacity = '0.4';
-    btn.style.pointerEvents = 'none';
+    continueBtn.style.opacity = '0.4';
+    continueBtn.style.pointerEvents = 'none';
   }
 
   window.game = new Game(canvas);

@@ -21,9 +21,13 @@ class HUD {
     ctx.quadraticCurveTo(x, y, x + radius, y);
     ctx.closePath();
   }
-  draw(ctx, health, maxHealth, crystals, score, checkpoint, levelNum, shieldTime) {
+  draw(ctx, health, maxHealth, crystals, score, checkpoint, levelNum, shieldTime, canvasWidth) {
     const padding = 16;
-    const barW = 300;
+    // Scale with the actual screen width instead of a fixed pixel value, so
+    // the bar neither overflows a narrow phone nor looks tiny on a large
+    // tablet screen. 280 is the smallest width that still fits every label
+    // inside without overlap (verified against the fixed text offsets below).
+    const barW = Math.max(280, Math.min(340, (canvasWidth || 400) * 0.75));
     const barH = 52;
     ctx.save();
     ctx.fillStyle = 'rgba(43, 27, 20, 0.6)';
