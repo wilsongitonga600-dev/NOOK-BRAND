@@ -1,0 +1,24 @@
+.pause-screen .menu-container,
+.game-over-screen .menu-container {
+  border: 1px solid rgba(230, 184, 74, 0.15);
+  animation: slideIn 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+
+.settings-container { max-height: 80vh; overflow-y: auto; }
+.settings-container::-webkit-scrollbar { width: 6px; }
+.settings-container::-webkit-scrollbar-track { background: transparent; }
+.settings-container::-webkit-scrollbar-thumb { background: rgba(230, 184, 74, 0.2); border-radius: 3px; }
+
+.checkpoint-toast {
+  position: absolute;
+  top: 38%; left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fbbf24;
+  font-size: 26px;
+  font-weight: 800;
+  text-shadow: 0 0 30px rgba(251, 191, 36, 0.6);
+  animation: checkpointPop 2.2s ease-out forwards;
+  pointer-events: none;
+  z-index: 8;
+  letter-spacing: 3px;
+}

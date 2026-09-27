@@ -1,0 +1,29 @@
+@keyframes pulse-glow {
+  0%, 100% { text-shadow: 0 0 30px rgba(230, 184, 74,0.25), 0 0 60px rgba(230, 184, 74,0.08); }
+  50% { text-shadow: 0 0 50px rgba(230, 184, 74,0.5), 0 0 100px rgba(230, 184, 74,0.15); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes checkpointPop {
+  0% { transform: translate(-50%,-50%) scale(0.4); opacity: 0; filter: blur(4px); }
+  15% { transform: translate(-50%,-50%) scale(1.15); opacity: 1; filter: blur(0); }
+  30% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+  80% { transform: translate(-50%,-50%) scale(1); opacity: 0.8; }
+  100% { transform: translate(-50%,-50%) scale(0.9); opacity: 0; }
+}
+
+.menu-screen .menu-container {
+  animation: float 8s ease-in-out infinite, slideIn 0.5s ease-out;
+}
+
+.game-title { animation: pulse-glow 4s ease-in-out infinite; }
+.settings-screen .menu-container { animation: slideIn 0.3s ease-out; }
