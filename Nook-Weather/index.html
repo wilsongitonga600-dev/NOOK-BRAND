@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nook Weather</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>
+  eruda.init();
+</script>
+
+<body>
+  <div class="app">
+    <header class="masthead">
+      <div>
+        <h1>NOOK WEATHER</h1>
+        <p>Atmosphere, read plainly.</p>
+      </div>
+    </header>
+
+    <div class="search-row">
+      <form class="search-form">
+        <input class="search-input" type="text" placeholder="Search a place…" autocomplete="off" />
+        <button type="submit">Go</button>
+      </form>
+      <button type="button" class="locate-btn" title="Use my location">📍</button>
+    </div>
+
+    <div class="location-results" hidden></div>
+    <p class="status" hidden></p>
+
+    <section class="hero" hidden>
+      <div class="hero-sky">
+        <div class="hero-top">
+          <div>
+            <p class="hero-temp">—°</p>
+            <p class="hero-label">—</p>
+            <p class="hero-place">—</p>
+          </div>
+          <div class="hero-icon"></div>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div><span class="stat-label">Feels like</span><span data-stat="feels">—</span></div>
+        <div><span class="stat-label">Humidity</span><span data-stat="humidity">—</span></div>
+        <div><span class="stat-label">Wind</span><span data-stat="wind">—</span></div>
+      </div>
+    </section>
+
+    <section class="forecast" hidden>
+      <div class="forecast-track"></div>
+    </section>
+
+    <footer class="attribution">
+      Data via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · part of the Nook collection
+    </footer>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
