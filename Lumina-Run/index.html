@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#2B1B14">
+  <title>Nook: Lumina Run</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/game-ui.css">
+  <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+  <div id="error-box" style="position:fixed;top:0;left:0;width:100%;background:#ef4444;color:#fff;padding:12px;z-index:9999;font-family:monospace;font-size:13px;display:none;white-space:pre-wrap;max-height:200px;overflow:auto;"></div>
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="main-menu" class="screen menu-screen">
+    <div class="menu-container">
+      <h1 class="game-title">NOOK</h1>
+      <h2 class="game-subtitle">LUMINA RUN</h2>
+      <div class="menu-buttons">
+        <button id="btn-play" class="menu-btn primary">▶ PLAY</button>
+        <button id="btn-continue" class="menu-btn">CONTINUE</button>
+        <button id="btn-settings" class="menu-btn">⚙ SETTINGS</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="level-select" class="screen level-select-screen hidden">
+    <div class="menu-container">
+      <h2 class="menu-title">SELECT LEVEL</h2>
+      <div class="level-grid" id="level-grid">
+        <button class="level-card" data-level="1" id="level-1-card">
+          <span class="level-num">1</span>
+          <span class="level-name">Crystal Caverns</span>
+          <span class="level-status" id="level-1-status">NEW</span>
+        </button>
+        <button class="level-card locked" data-level="2" id="level-2-card">
+          <span class="level-num">2</span>
+          <span class="level-name">Sky Ruins</span>
+          <span class="level-status" id="level-2-status">LOCKED</span>
+        </button>
+        <button class="level-card locked" data-level="3" id="level-3-card">
+          <span class="level-num">3</span>
+          <span class="level-name">Void Edge</span>
+          <span class="level-status" id="level-3-status">LOCKED</span>
+        </button>
+      </div>
+      <button id="btn-back-from-levels" class="menu-btn">← BACK</button>
+    </div>
+  </div>
+
+  <div id="pause-menu" class="screen pause-screen hidden">
+    <div class="menu-container">
+      <h2 class="menu-title">PAUSED</h2>
+      <div class="menu-buttons">
+        <button id="btn-resume" class="menu-btn primary">▶ RESUME</button>
+        <button id="btn-restart" class="menu-btn">↻ RESTART LEVEL</button>
+        <button id="btn-quit" class="menu-btn">⌂ MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="game-over" class="screen game-over-screen hidden">
+    <div class="menu-container">
+      <h2 class="menu-title game-over-title">GAME OVER</h2>
+      <div class="stats">
+        <p>Score: <span id="final-score">0</span></p>
+        <p>Crystals: <span id="final-crystals">0</span></p>
+      </div>
+      <div class="menu-buttons">
+        <button id="btn-try-again" class="menu-btn primary">↻ TRY AGAIN</button>
+        <button id="btn-main-menu" class="menu-btn">⌂ MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="win-screen" class="screen win-screen hidden">
+    <div class="menu-container">
+      <h2 class="menu-title" style="color:#E6B84A;text-shadow:0 0 30px rgba(230,184,74,0.4);">LEVEL COMPLETE!</h2>
+      <div class="stats">
+        <p>Score: <span id="win-score">0</span></p>
+        <p>Crystals: <span id="win-crystals">0</span></p>
+      </div>
+      <div class="menu-buttons">
+        <button id="btn-next-level" class="menu-btn primary">▶ NEXT LEVEL</button>
+        <button id="btn-play-again" class="menu-btn">↻ REPLAY</button>
+        <button id="btn-win-menu" class="menu-btn">⌂ MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settings-screen" class="screen settings-screen hidden">
+    <div class="menu-container settings-container">
+      <h2 class="menu-title">SETTINGS</h2>
+      <div class="settings-list">
+        <label class="setting-row">
+          <span>Sound Effects</span>
+          <input type="checkbox" id="toggle-sound" checked>
+        </label>
+        <label class="setting-row">
+          <span>Music</span>
+          <input type="checkbox" id="toggle-music" checked>
+        </label>
+        <div class="setting-row info">
+          <span>Controls</span>
+          <div class="controls-info">
+            <p><kbd>A</kbd> <kbd>←</kbd> Move Left</p>
+            <p><kbd>D</kbd> <kbd>→</kbd> Move Right</p>
+            <p><kbd>Space</kbd> Jump</p>
+            <p><kbd>P</kbd> Pause</p>
+          </div>
+        </div>
+        <button id="btn-reset-progress" class="menu-btn danger">↺ RESET PROGRESS</button>
+      </div>
+      <button id="btn-close-settings" class="menu-btn">← BACK</button>
+    </div>
+  </div>
+
+  <div id="mobile-controls" class="mobile-controls">
+    <div class="dpad">
+      <button id="btn-left" class="control-btn" aria-label="Left">◀</button>
+      <button id="btn-right" class="control-btn" aria-label="Right">▶</button>
+    </div>
+    <button id="btn-jump" class="control-btn jump-btn" aria-label="Jump">JUMP</button>
+  </div>
+
+  <script>
+    function showBootError(msg) {
+      const box = document.getElementById('error-box');
+      box.style.display = 'block';
+      box.textContent += (box.textContent ? '\n\n' : '') + msg;
+    }
+    window.onerror = function(msg, url, line, col, err) {
+      showBootError('ERROR: ' + msg + '\nLine ' + line + '\n' + (err && err.stack ? err.stack : ''));
+    };
+    window.addEventListener('unhandledrejection', function(e) {
+      showBootError('UNHANDLED PROMISE REJECTION: ' + (e.reason && e.reason.stack ? e.reason.stack : e.reason));
+    });
+  </script>
+  <script src="js/systems/physics.js"></script>
+  <script src="js/systems/particles.js"></script>
+  <script src="js/systems/audio.js"></script>
+  <script src="js/world/camera.js"></script>
+  <script src="js/world/level.js"></script>
+  <script src="js/player/player.js"></script>
+  <script src="js/ui/hud.js"></script>
+  <script src="js/ui/menu.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
