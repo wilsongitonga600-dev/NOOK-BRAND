@@ -271,8 +271,17 @@ input[type="checkbox"] { width: 22px; height: 22px; accent-color: #D66A45; curso
 }
 .jump-btn:active { background: rgba(214, 106, 69, 0.4); }
 
-@media (min-width: 768px) {
+/* Hide on-screen touch controls whenever the primary input is a real mouse/
+   trackpad (hover + fine pointer) — this is what actually distinguishes
+   "desktop" from "phone/tablet", not window width. A narrow desktop browser
+   window used to incorrectly show touch buttons under the old width-based
+   check, and a touchscreen device with a wide screen would incorrectly hide
+   them the same way. */
+@media (hover: hover) and (pointer: fine) {
   .mobile-controls { display: none; }
+}
+
+@media (min-width: 768px) {
   .menu-container { min-width: 360px; padding: 56px 48px; }
   .game-title { font-size: 64px; }
 }

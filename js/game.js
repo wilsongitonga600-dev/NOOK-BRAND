@@ -92,16 +92,27 @@ class Game {
       this.resize();
       setTimeout(() => this.resize(), 150);
     });
+    // Belt-and-suspenders: watch the canvas's own laid-out size directly.
+    // This fires on layout changes that don't reliably send a window
+    // "resize" event on every browser (e.g. toggling "Request Desktop
+    // Site"), since it observes the actual element rather than the window.
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => this.resize()).observe(canvas);
+    }
     this.setupInputs();
   }
 
   resize() {
-    // visualViewport reflects the actual visible area more accurately than
-    // window.innerWidth/innerHeight on many Android browsers (dynamic
-    // toolbars, on-screen keyboard, some notch/cutout handling).
-    const vv = window.visualViewport;
-    const w = vv ? Math.round(vv.width) : window.innerWidth;
-    const h = vv ? Math.round(vv.height) : window.innerHeight;
+    // Measure the canvas element's own laid-out box size, not the window or
+    // visualViewport — those can diverge from how the canvas is actually
+    // drawn on screen under things like Chrome's "Request Desktop Site"
+    // mode (which fakes a ~980px viewport and zooms the page to fit), which
+    // previously left a blank strip where the canvas thought it was shorter
+    // than it was actually rendered. getBoundingClientRect() always
+    // reflects reality regardless of what zoom/emulation is happening above it.
+    const rect = this.canvas.getBoundingClientRect();
+    const w = Math.round(rect.width);
+    const h = Math.round(rect.height);
     if (w <= 0 || h <= 0) return;
     this.canvas.width = w;
     this.canvas.height = h;
