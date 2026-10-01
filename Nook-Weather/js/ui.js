@@ -6,41 +6,41 @@ import { iconMarkup } from './icons.js';
 
 const DAY_ABBR = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Sky gradients per weather group, split by day/night. This is the one
-// place the app's "signature" lives: the hero panel's background always
-// reflects the real, current sky rather than a fixed color.
+// Hero gradients per weather group, split by day/night. The hero panel still
+// reflects the real, current sky, but as a restrained tint on charcoal
+// (warm for clear/thunder, teal for rain/drizzle) to fit the workbench theme.
 const SKY = {
   clear: {
-    day: ['#3E6FB0', '#E8A94A'],
-    night: ['#0B0F22', '#2B2F63'],
+    day: ['#262520', '#3d3522'],
+    night: ['#141716', '#1a201f'],
   },
   'partly-cloudy': {
-    day: ['#4E7AAE', '#B9C4D6'],
-    night: ['#12172B', '#3A3F66'],
+    day: ['#232725', '#343a37'],
+    night: ['#141716', '#1c2220'],
   },
   cloudy: {
-    day: ['#5B6B82', '#A6AEBD'],
-    night: ['#14182A', '#333852'],
+    day: ['#222625', '#303634'],
+    night: ['#131615', '#1b201f'],
   },
   fog: {
-    day: ['#7C8592', '#C7CCD3'],
-    night: ['#1A1E2E', '#454A5E'],
+    day: ['#262a28', '#3a403d'],
+    night: ['#151918', '#212725'],
   },
   drizzle: {
-    day: ['#3F5A72', '#6FA8B8'],
-    night: ['#0F1424', '#2C4658'],
+    day: ['#1e2726', '#2a3d3a'],
+    night: ['#121615', '#192421'],
   },
   rain: {
-    day: ['#2E4A63', '#5A8AA0'],
-    night: ['#0A0E1C', '#233A4C'],
+    day: ['#1b2524', '#25393a'],
+    night: ['#111514', '#162120'],
   },
   snow: {
-    day: ['#5D7690', '#DCE6EC'],
-    night: ['#151A2C', '#495B6E'],
+    day: ['#262b2b', '#3b4444'],
+    night: ['#151919', '#202727'],
   },
   thunder: {
-    day: ['#2A2540', '#8B7EC8'],
-    night: ['#0A0813', '#2E2650'],
+    day: ['#211f1c', '#3a3020'],
+    night: ['#121211', '#221e16'],
   },
 };
 

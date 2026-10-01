@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Nook Weather</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -29,7 +29,14 @@
         <input class="search-input" type="text" placeholder="Search a place…" autocomplete="off" />
         <button type="submit">Go</button>
       </form>
-      <button type="button" class="locate-btn" title="Use my location">📍</button>
+      <button type="button" class="locate-btn" title="Use my location" aria-label="Use my location">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.5"/>
+          <circle cx="12" cy="12" r="7.5"/>
+          <line x1="12" y1="1.5" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22.5"/>
+          <line x1="1.5" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22.5" y2="12"/>
+        </svg>
+      </button>
     </div>
 
     <div class="location-results" hidden></div>
@@ -37,6 +44,7 @@
 
     <section class="hero" hidden>
       <div class="hero-sky">
+        <p class="panel-label">Current conditions</p>
         <div class="hero-top">
           <div>
             <p class="hero-temp">—°</p>
@@ -54,6 +62,7 @@
     </section>
 
     <section class="forecast" hidden>
+      <p class="panel-label">7-day forecast</p>
       <div class="forecast-track"></div>
     </section>
 
