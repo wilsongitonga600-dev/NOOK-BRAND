@@ -1,0 +1,64 @@
+/* ==========================================================================
+   ANIMATION SYSTEM
+   Rule of thumb: motion communicates navigation, state change, feedback,
+   hierarchy, loading, or success — never decoration for its own sake.
+   ========================================================================== */
+
+@keyframes fade-slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes badge-bump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+@keyframes skel-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes hero-drift {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+@keyframes count-tick {
+  from { opacity: 0.3; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes flight-fade {
+  0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--fx, 0), var(--fy, 0)) scale(0.2); }
+}
+
+.skel { animation: skel-shimmer 1.4s linear infinite; }
+
+.hero-eyebrow, .hero h1, .hero p, .hero-actions {
+  animation: fade-slide-up var(--med) var(--ease) both;
+}
+.hero h1 { animation-delay: 60ms; }
+.hero p { animation-delay: 120ms; }
+.hero-actions { animation-delay: 180ms; }
+
+.hero .bezel {
+  animation: hero-drift 6s ease-in-out infinite;
+}
+
+.page-enter {
+  animation: fade-slide-up var(--med) var(--ease) both;
+}
+
+.flying-thumb {
+  position: fixed;
+  z-index: 200;
+  border-radius: var(--r-sm);
+  pointer-events: none;
+  box-shadow: 0 10px 30px -8px rgba(0,0,0,0.4);
+}
+.flying-thumb.go {
+  animation: flight-fade 520ms var(--ease) forwards;
+}
