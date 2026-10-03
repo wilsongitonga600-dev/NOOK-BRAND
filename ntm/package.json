@@ -1,0 +1,15 @@
+{
+  "name": "ntm",
+  "version": "0.1.0",
+  "description": "Nook Task Manager (NTM) - mobile-first task management app",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
