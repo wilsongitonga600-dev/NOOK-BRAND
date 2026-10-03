@@ -1,114 +1,114 @@
-# NTM — Nook Task Manager
+Nook Task Manager
 
-Mobile-first task manager. Add → Organize → Prioritize → Plan → Execute →
-Complete → Analyze. No task wheel, no randomization — you decide what
-happens next.
+NTM (Nook Task Manager) is a lightweight, mobile-first task management application built by NOOK.
 
-## Stack
+The project is focused on helping users organize tasks, prioritize work, stay focused, and understand their progress through a simple interface.
 
-- **Backend:** Node.js + Express, using Node's **built-in `node:sqlite`**
-  module for storage (not the `sqlite3` or `better-sqlite3` npm packages).
-  This matters for Termux: `node:sqlite` ships inside Node itself, so
-  there's nothing for node-gyp to compile and no native-module install
-  pain. It requires **Node >= 22.5**.
-- **Frontend:** plain HTML/CSS/JS, no build step, no framework. Open the
-  page and it runs — nothing to bundle from Termux.
-- **Database file:** `data/ntm.sqlite` (created automatically on first
-  run). This is the single source of truth; the browser never uses
-  localStorage for task data.
+✦ Features
 
-## Running it on Termux
+- Task Management — Create, edit, complete, pause, start, and delete tasks.
+- Priorities — Critical, High, Medium, and Low priority levels.
+- Categories — Organize tasks by Work, Personal, Study, Project, Errands, and custom categories.
+- Scheduling — Due dates, scheduled times, and estimated task durations.
+- Focus Sessions — Track focused time spent working on tasks.
+- Progress Statistics — Completion progress, focus time, trends, and task breakdowns.
+- Search & Filtering — Find tasks by status, priority, category, date, or search term.
+- Data Export — Export task and category data as JSON.
+- Responsive UI — Designed primarily for mobile while adapting to larger screens.
 
-```bash
-# check your Node version first — must be 22.5 or newer
-node --version
+⚙️ Tech Stack
 
-# if you need a newer Node in Termux:
-pkg update && pkg install nodejs
+Frontend
 
-# from the ntm/ folder:
-npm install       # installs Express only — pure JS, no compilation
-npm start         # or: node server.js
-```
+- HTML
+- CSS
+- Vanilla JavaScript
 
-Then open `http://localhost:3000` in the browser (Termux or otherwise,
-same device).
+Backend
 
-Test the API directly with curl if useful:
+- Node.js
+- Express
 
-```bash
-curl http://localhost:3000/api/health
-curl http://localhost:3000/api/tasks
-curl -X POST http://localhost:3000/api/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Finish Nook UI","priority":"high","estimatedMinutes":90,"dueDate":"2026-09-04"}'
-```
+Current Database
 
-### If your Termux Node is older than 22.5
+- SQLite
+- Node.js built-in "node:sqlite" API
 
-Either upgrade Node (`pkg install nodejs` usually gets you current), or
-tell me and I'll swap `db/database.js` to use the `sqlite3` npm package
-instead — it'll need Termux's build tools (`pkg install python make
-clang`) since that one does compile a native module.
+Planned Cloud Backend
 
-## Project layout
+- Supabase
+- PostgreSQL
+- Supabase Auth
+- Row Level Security (RLS)
 
-```
+Supabase is planned as the next backend stage, providing authentication, user-owned data, cloud persistence, and cross-device synchronization.
+
+📁 Project Structure
+
 ntm/
-├── server.js              Express app entrypoint
-├── db/database.js         Schema, seeding, node:sqlite connection
-├── routes/
-│   ├── tasks.js            Task CRUD, filtering, complete/start actions
-│   ├── categories.js       Category CRUD
-│   ├── stats.js            Dashboard + statistics aggregation (real data)
-│   └── settings.js         Profile name, export, reset
+├── db/
+│   └── database.js
 ├── public/
-│   ├── index.html          App shell: topbar, nav, modal/toast hosts
-│   ├── css/style.css       Design tokens + all component styles
+│   ├── index.html
+│   ├── css/
+│   │   └── style.css
 │   └── js/
-│       ├── api.js          fetch wrapper for the backend
-│       ├── charts.js       Dependency-free inline SVG charts
-│       └── app.js          Router, page renders, task modal, events
-└── data/ntm.sqlite         Created on first run — this is your data
-```
+│       ├── api.js
+│       ├── app.js
+│       └── charts.js
+├── routes/
+│   ├── categories.js
+│   ├── settings.js
+│   ├── stats.js
+│   └── tasks.js
+├── data/
+├── server.js
+├── package.json
+└── README.md
 
-## What's implemented (Phases 1–8 of the spec)
+🚀 Run Locally
 
-- **Database:** tasks, categories, settings tables with the full field
-  set from the spec (status, priority, category, due date, scheduled
-  time, estimated/actual duration, position, timestamps), seeded with
-  the six default categories.
-- **API:** full CRUD for tasks and categories, complete/start actions,
-  filtering by when/status/priority/category, search, dashboard and
-  statistics aggregation endpoints, export/reset.
-- **Home:** greeting, today's progress (real percent from today's
-  tasks), today's focus (highest-priority active task), quick stat
-  cards with sparklines, upcoming list.
-- **Tasks:** search, When/category pill filters, grouped-by-date task
-  cards, tap-to-complete, tap-to-edit.
-- **Add/Edit Task modal:** the central `+` button opens this — title,
-  notes, priority, category, due date, schedule, estimate, delete.
-- **Statistics:** completed/focus/rate summary cards, a productivity
-  area chart, a focus-time bar chart, a category breakdown — all
-  computed from SQLite, with real empty states when there's no data
-  yet (never fake chart data).
-- **Account:** display name, category management (add/delete), JSON
-  export, "clear all tasks" with confirmation.
-- **Theme:** near-black + dark olive surfaces + lime/yellow-green
-  accent, exactly as specified — rounded cards, pill filters, elevated
-  central Add button.
+npm install
+npm start
 
-## Not yet built (later phases)
+Then open:
 
-- **Planning/schedule timeline view** (Phase 7's `MY PLAN` vertical
-  timeline with now/next markers) — the data model supports it
-  (`scheduledTime` on every task), but there's no dedicated timeline
-  screen yet. Currently, "today" ordering surfaces this on the Tasks
-  and Home screens instead.
-- Drag-to-reorder for the `position` field (currently set on create
-  only).
-- Weekly/monthly toggle only exists on the Statistics page; Home's
-  sparklines are fixed to the last 7 days.
+http://localhost:3000
 
-Tell me which of these to build next, or point me at anything that
-doesn't feel right once you've run it on-device.
+🗄️ Database Direction
+
+The current development version uses a local SQLite database so NTM can run simply without a separate database server.
+
+The planned Supabase architecture will introduce:
+
+Supabase Auth
+      │
+      ▼
+   Profiles
+      │
+ ┌────┼─────────────┐
+ ▼    ▼             ▼
+Tasks Categories  Settings
+ │
+ ▼
+Focus Sessions
+
+This will allow NTM to move from a local single-user application toward an authenticated, multi-user, cloud-backed application.
+
+📌 Current Status
+
+NTM is actively under development.
+
+The current version provides the core task-management system, local persistence, focus sessions, statistics, categories, data export, and responsive interface.
+
+The next major stage is the Supabase backend migration.
+
+SQLite Note
+
+The project has had SQLite-based development and experimentation, including the separate "sqlite3" package in earlier work. The current version, however, uses Node.js's built-in "node:sqlite" API rather than "sqlite3".
+
+---
+
+NOOK
+
+NTM is part of the NOOK ecosystem — a collection of independent applications, games, tools, and experiments.
