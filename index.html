@@ -2,153 +2,308 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#160B0D">
+  <meta name="description" content="NOOK — a collection of games, tools, experiments and useful software.">
   <title>NOOK — Collection</title>
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      margin: 0;
-      min-height: 100%;
-      font-family: Arial, sans-serif;
-      background: #0b0d0c;
-      color: #f1f3ed;
-    }
-
-    body {
-      display: flex;
-      justify-content: center;
-      padding: 48px 20px;
-    }
-
-    main {
-      width: 100%;
-      max-width: 900px;
-    }
-
-    header {
-      margin-bottom: 42px;
-    }
-
-    .brand {
-      font-size: 14px;
-      letter-spacing: 0.28em;
-      color: #b9c9a5;
-      margin-bottom: 14px;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(42px, 9vw, 82px);
-      letter-spacing: -0.06em;
-      line-height: 0.9;
-    }
-
-    .intro {
-      max-width: 560px;
-      margin-top: 22px;
-      color: #9da59b;
-      line-height: 1.6;
-    }
-
-    .collection {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
-    }
-
-    .project {
-      display: block;
-      padding: 26px;
-      min-height: 210px;
-      border: 1px solid #272d29;
-      border-radius: 18px;
-      background: #111513;
-      color: inherit;
-      text-decoration: none;
-      transition:
-        transform 180ms ease,
-        border-color 180ms ease,
-        background 180ms ease;
-    }
-
-    .project:hover {
-      transform: translateY(-4px);
-      border-color: #69765f;
-      background: #151a17;
-    }
-
-    .number {
-      font-family: monospace;
-      font-size: 12px;
-      color: #69765f;
-      margin-bottom: 40px;
-    }
-
-    .project h2 {
-      margin: 0 0 10px;
-      font-size: 25px;
-    }
-
-    .project p {
-      margin: 0;
-      color: #8f9890;
-      line-height: 1.5;
-      font-size: 14px;
-    }
-
-    footer {
-      margin-top: 46px;
-      padding-top: 18px;
-      border-top: 1px solid #202521;
-      color: #5f675f;
-      font-size: 12px;
-    }
-  </style>
+  <link rel="stylesheet" href="./style.css">
 </head>
-
 <body>
+
+  <!-- ambient layers -->
+  <div class="grain" aria-hidden="true"></div>
+  <div class="aurora" aria-hidden="true"></div>
+
   <main>
 
+    <!-- ============ HEADER ============ -->
     <header>
-      <div class="brand">NOOK</div>
-      <h1>Collection.</h1>
+
+      <div class="brand" aria-label="NOOK">
+        <svg class="brand-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="NOOK brand mark">
+          <defs>
+            <filter id="nookBrandGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2" result="blur"/>
+              <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <path d="M18 70 C12 60 12 45 18 34 C27 18 44 10 62 13 C78 16 88 27 89 42 C90 57 82 69 68 77 C57 83 44 84 33 80 L18 88 Z"
+                fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" filter="url(#nookBrandGlow)"/>
+          <path d="M31 61 V40 L50 61 V36" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M50 61 V44 L69 59 V43" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="brand-wordmark">NOOK</span>
+      </div>
+
+      <h1>Collection<span class="h1-dot">.</span></h1>
 
       <p class="intro">
-        A small collection of things built under the Nook name.
+        A small collection of things built under the Nook name —
+        <span class="cycle" id="cycleWord">games</span><span class="caret" aria-hidden="true">_</span><br>
         Games, tools, experiments and useful little pieces of software.
       </p>
+
+      <div class="stats" role="list">
+        <div class="stat" role="listitem">
+          <span class="stat-num" id="statTotal">0</span>
+          <span class="stat-label">Projects</span>
+        </div>
+        <div class="stat" role="listitem">
+          <span class="stat-num">3</span>
+          <span class="stat-label">Categories</span>
+        </div>
+        <div class="stat" role="listitem">
+          <span class="stat-num">∞</span>
+          <span class="stat-label">Curiosity</span>
+        </div>
+      </div>
+
+      <span class="eyebrow">Selected projects</span>
+
     </header>
 
-    <section class="collection">
+    <!-- ============ FILTERS ============ -->
+    <nav class="filters" aria-label="Filter projects by category">
+      <button class="chip is-active" data-filter="all" aria-pressed="true">All</button>
+      <button class="chip" data-filter="game" aria-pressed="false">Games</button>
+      <button class="chip" data-filter="tool" aria-pressed="false">Tools</button>
+      <button class="chip" data-filter="app" aria-pressed="false">Apps</button>
+      <span class="result-count" id="resultCount" aria-live="polite"></span>
+    </nav>
 
-      <a class="project" href="./Lumina-Run/">
-        <div class="number">01 / GAME</div>
-        <h2>Nook: Lumina Run</h2>
-        <p>
-          A side-scrolling browser game built with HTML, CSS and vanilla JavaScript.
-        </p>
+    <!-- ============ COLLECTION ============ -->
+    <section class="collection" id="projectCollection" aria-label="Nook projects">
+
+      <!-- Nook: Lumina Run -->
+      <a class="project reveal" href="https://wilsongitonga600-dev.github.io/NOOK-BRAND/Lumina-Run/" data-category="game"
+         data-search="lumina lumina run nook lumina run game browser javascript html css play side scrolling platformer endless runner"
+         aria-label="Open Nook: Lumina Run">
+        <div class="card-art art-1" aria-hidden="true">
+          <svg viewBox="0 0 200 120" preserveAspectRatio="xMaxYMid meet">
+            <circle cx="150" cy="34" r="26" fill="rgba(231,184,201,.28)"/>
+            <path d="M0 92 L34 66 L62 88 L96 52 L128 84 L160 60 L200 88 V120 H0 Z" fill="rgba(231,184,201,.16)"/>
+            <path d="M0 104 L44 82 L80 102 L120 74 L156 98 L200 80 V120 H0 Z" fill="rgba(231,184,201,.24)"/>
+            <rect x="20" y="26" width="7" height="7" fill="rgba(255,253,249,.8)"/>
+            <rect x="52" y="14" width="5" height="5" fill="rgba(255,253,249,.5)"/>
+            <rect x="96" y="22" width="6" height="6" fill="rgba(255,253,249,.65)"/>
+          </svg>
+        </div>
+        <div class="project-content">
+          <div class="number">01 / GAME</div>
+          <h2>Nook: Lumina Run</h2>
+          <p>A side-scrolling browser game built with HTML, CSS and vanilla JavaScript. Dodge, jump, chase the light.</p>
+          <div class="project-meta">
+            <span>Play</span><span>Browser</span><span>Vanilla JS</span>
+          </div>
+        </div>
       </a>
 
-      <a class="project" href="./Nook-Weather/">
-        <div class="number">02 / WEATHER</div>
-        <h2>Nook Weather</h2>
-        <p>
-          A lightweight weather application using live weather data.
-        </p>
+      <!-- Nook Weather -->
+      <a class="project reveal" href="https://wilsongitonga600-dev.github.io/NOOK-BRAND/Nook-Weather/" data-category="app"
+         data-search="nook weather weather forecast live data temperature application app api climate"
+         aria-label="Open Nook Weather">
+        <div class="card-art art-2" aria-hidden="true">
+          <svg viewBox="0 0 200 120" preserveAspectRatio="xMaxYMid meet">
+            <circle cx="66" cy="40" r="18" fill="rgba(255,214,170,.5)"/>
+            <path d="M40 84 a18 18 0 0 1 4 -35 a24 24 0 0 1 44 -8 a20 20 0 0 1 30 16 a16 16 0 0 1 -6 27 Z" fill="rgba(216,196,255,.30)"/>
+            <line x1="60" y1="96" x2="54" y2="108" stroke="rgba(216,196,255,.6)" stroke-width="3" stroke-linecap="round"/>
+            <line x1="88" y1="96" x2="82" y2="108" stroke="rgba(216,196,255,.6)" stroke-width="3" stroke-linecap="round"/>
+            <line x1="116" y1="96" x2="110" y2="108" stroke="rgba(216,196,255,.6)" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="project-content">
+          <div class="number">02 / APP</div>
+          <h2>Nook Weather</h2>
+          <p>A lightweight weather application using live data, with a glanceable, calm interface.</p>
+          <div class="project-meta">
+            <span>Open</span><span>Live Data</span>
+          </div>
+        </div>
       </a>
+
+      <!-- Shift Reconciliation -->
+      <a class="project reveal" href="https://wilsongitonga600-dev.github.io/Petrol-station-Economics/shift-app/index.html" data-category="tool"
+         data-search="shift reconciliation reconcile shifts hours timesheet records check compare work tool"
+         aria-label="Open Shift Reconciliation">
+        <div class="card-art art-3" aria-hidden="true">
+          <svg viewBox="0 0 200 120" preserveAspectRatio="xMaxYMid meet">
+            <g stroke-linecap="round" stroke-width="5">
+              <line x1="44" y1="38" x2="84" y2="38" stroke="rgba(231,184,201,.7)"/>
+              <line x1="44" y1="58" x2="76" y2="58" stroke="rgba(231,184,201,.7)"/>
+              <line x1="44" y1="78" x2="88" y2="78" stroke="rgba(231,184,201,.7)"/>
+              <line x1="116" y1="38" x2="156" y2="38" stroke="rgba(216,196,255,.7)"/>
+              <line x1="116" y1="58" x2="148" y2="58" stroke="rgba(216,196,255,.7)"/>
+              <line x1="116" y1="78" x2="140" y2="78" stroke="rgba(216,196,255,.35)"/>
+            </g>
+            <g fill="none" stroke="rgba(184,231,205,.85)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M94 38 l4 4 l8 -9"/>
+              <path d="M94 58 l4 4 l8 -9"/>
+            </g>
+            <circle cx="100" cy="78" r="5" fill="none" stroke="rgba(255,214,170,.85)" stroke-width="3"/>
+          </svg>
+        </div>
+        <div class="project-content">
+          <div class="number">03 / TOOL</div>
+          <h2>Shift Reconciliation</h2>
+          <p>Reconcile shift records and spot the differences, so every shift adds up.</p>
+          <div class="project-meta">
+            <span>Open</span><span>Reconcile</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Nook Task Manager -->
+      <a class="project reveal soon" href="#" aria-disabled="true" title="Coming soon" data-category="app"
+         data-search="ntm nook task manager tasks task manager todo to do checklist productivity organise organize app"
+         aria-label="Open Nook Task Manager">
+        <div class="card-art art-4" aria-hidden="true">
+          <svg viewBox="0 0 200 120" preserveAspectRatio="xMaxYMid meet">
+            <g fill="none" stroke="rgba(184,231,205,.75)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="46" y="28" width="16" height="16" rx="4"/>
+              <rect x="46" y="52" width="16" height="16" rx="4"/>
+              <rect x="46" y="76" width="16" height="16" rx="4" stroke="rgba(184,231,205,.4)"/>
+              <path d="M50 36 l4 4 l6 -8"/>
+              <path d="M50 60 l4 4 l6 -8"/>
+            </g>
+            <g stroke-linecap="round" stroke-width="5">
+              <line x1="74" y1="36" x2="148" y2="36" stroke="rgba(255,253,249,.35)"/>
+              <line x1="74" y1="60" x2="132" y2="60" stroke="rgba(255,253,249,.35)"/>
+              <line x1="74" y1="84" x2="140" y2="84" stroke="rgba(255,253,249,.7)"/>
+            </g>
+          </svg>
+        </div>
+        <div class="project-content">
+          <div class="number">04 / APP</div>
+          <h2>Nook Task Manager</h2>
+          <p>NTM keeps your tasks in one place. Add them, tick them off, move on.</p>
+          <div class="project-meta">
+            <span>Coming soon</span>
+            <span>Tasks</span><span>NTM</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Nook Narrator -->
+      <a class="project reveal soon" href="#" aria-disabled="true" title="Coming soon" data-category="app"
+         data-search="nook narrator narrator narrate read aloud text to speech voice audio listen app"
+         aria-label="Open Nook Narrator">
+        <div class="card-art art-5" aria-hidden="true">
+          <svg viewBox="0 0 200 120" preserveAspectRatio="xMaxYMid meet">
+            <path d="M52 30 h96 a10 10 0 0 1 10 10 v36 a10 10 0 0 1 -10 10 h-58 l-18 16 v-16 h-20 a10 10 0 0 1 -10 -10 v-36 a10 10 0 0 1 10 -10 Z" fill="rgba(216,196,255,.18)" stroke="rgba(216,196,255,.55)" stroke-width="3" stroke-linejoin="round"/>
+            <g stroke="rgba(255,253,249,.75)" stroke-width="5" stroke-linecap="round">
+              <line x1="72" y1="58" x2="72" y2="58"/>
+              <line x1="88" y1="48" x2="88" y2="68"/>
+              <line x1="104" y1="40" x2="104" y2="76"/>
+              <line x1="120" y1="50" x2="120" y2="66"/>
+              <line x1="136" y1="55" x2="136" y2="61"/>
+            </g>
+          </svg>
+        </div>
+        <div class="project-content">
+          <div class="number">05 / APP</div>
+          <h2>Nook Narrator</h2>
+          <p>Give it text and it reads it back to you out loud.</p>
+          <div class="project-meta">
+            <span>Coming soon</span>
+            <span>Listen</span><span>Audio</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Nook Player -->
+      <a class="project reveal soon" href="#" aria-disabled="true" title="Coming soon" data-category="app"
+         data-search="nook player player music mp3 audio songs tracks playlist listen play app"
+         aria-label="Open Nook Player">
+        <div class="card-art art-6" aria-hidden="true">
+          <svg viewBox="0 0 200 120" preserveAspectRatio="xMaxYMid meet">
+            <circle cx="72" cy="60" r="26" fill="rgba(255,214,170,.2)" stroke="rgba(255,214,170,.7)" stroke-width="3"/>
+            <path d="M65 47 L88 60 L65 73 Z" fill="rgba(255,214,170,.9)"/>
+            <g stroke="rgba(231,184,201,.7)" stroke-width="6" stroke-linecap="round">
+              <line x1="120" y1="72" x2="120" y2="84"/>
+              <line x1="134" y1="52" x2="134" y2="84"/>
+              <line x1="148" y1="40" x2="148" y2="84"/>
+              <line x1="162" y1="60" x2="162" y2="84"/>
+            </g>
+          </svg>
+        </div>
+        <div class="project-content">
+          <div class="number">06 / APP</div>
+          <h2>Nook Player</h2>
+          <p>An MP3 player in your browser. Pick your tracks and press play.</p>
+          <div class="project-meta">
+            <span>Coming soon</span>
+            <span>Listen</span><span>MP3</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- No results -->
+      <div class="no-results" id="noResults" aria-live="polite">
+        <span class="no-results-glyph" aria-hidden="true">◇</span>
+        <p>Nothing found in the nook.</p>
+        <button class="chip" id="resetFilters" type="button">Reset filters</button>
+      </div>
 
     </section>
 
+    <!-- ============ FOOTER ============ -->
     <footer>
-      NOOK — built independently.
+      <div class="marquee" aria-hidden="true">
+        <div class="marquee-track">
+          <span>NOOK — built independently — games — tools — experiments — software —&nbsp;</span>
+          <span>NOOK — built independently — games — tools — experiments — software —&nbsp;</span>
+        </div>
+      </div>
+      <div class="footer-row">
+        <span>NOOK — built independently.</span>
+        <span>2026</span>
+      </div>
     </footer>
 
   </main>
+
+  <!-- ============ FLOATING SEARCH ============ -->
+  <form class="prompt-bar" id="searchBar" role="search" aria-label="Search Nook projects" autocomplete="off">
+
+    <button class="prompt-action" id="showAll" type="button" aria-label="Show all projects" title="Show all projects">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/>
+        <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/>
+        <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/>
+        <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>
+      </svg>
+    </button>
+
+    <input class="prompt-input" id="projectSearch" type="search" placeholder="Explore the collection..." aria-label="Search Nook projects" enterkeyhint="search" inputmode="search" spellcheck="false">
+
+    <button class="prompt-action clear-search" id="clearSearch" type="button" aria-label="Clear search" title="Clear search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18"/>
+      </svg>
+    </button>
+
+    <button class="prompt-action voice-action" id="voiceAction" type="button" aria-label="Voice search" aria-pressed="false" title="Voice search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="9" y="3" width="6" height="11" rx="3"/>
+        <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/>
+        <path d="M12 18v2.5M9 21h6"/>
+      </svg>
+    </button>
+
+    <button class="prompt-action search-submit" id="searchSubmit" type="submit" aria-label="Search" title="Search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="6.5"/>
+        <path d="M20 20l-4.3-4.3"/>
+      </svg>
+    </button>
+
+    <span class="sr-only" id="voiceStatus" role="status" aria-live="polite"></span>
+
+  </form>
+
+  <script src="./script.js"></script>
 </body>
 </html>
