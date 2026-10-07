@@ -363,7 +363,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   font-weight: 500;
   transition: all 0.15s ease;
 }
-.pill.active { background: var(--accent); color: var(--accent-text-on); border-color: var(--accent); }
+.pill.active { background: var(--nook-btn-grad); color: var(--accent-text-on); border-color: var(--accent); box-shadow: 0 4px 12px -6px var(--accent-glow); }
 
 /* ================= Search ================= */
 .search-bar {
@@ -384,7 +384,9 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 /* ================= Task list & cards ================= */
 .task-list { display: flex; flex-direction: column; gap: 10px; }
 .task-card {
-  background: var(--surface);
+  background:
+    linear-gradient(180deg, rgba(214, 240, 150, 0.03), rgba(214, 240, 150, 0) 45%),
+    var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 15px 16px;
@@ -405,7 +407,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   border: 2px solid var(--text-muted);
   transition: all 0.15s ease;
 }
-.task-check.checked { background: var(--accent); border-color: var(--accent); color: var(--accent-text-on); }
+.task-check.checked { background: var(--nook-btn-grad); border-color: var(--accent); color: var(--accent-text-on); }
 .task-body { flex: 1; min-width: 0; }
 .task-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; word-break: break-word; }
 .task-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -471,7 +473,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   border: 1px solid var(--border-strong); background: var(--surface);
   color: var(--text-secondary); font-size: 13px; font-weight: 500;
 }
-.segmented button.active { background: var(--accent); color: var(--accent-text-on); border-color: var(--accent); }
+.segmented button.active { background: var(--nook-btn-grad); color: var(--accent-text-on); border-color: var(--accent); box-shadow: 0 4px 12px -6px var(--accent-glow); }
 
 /* ================= Modal / bottom sheet ================= */
 .modal-backdrop {
@@ -522,7 +524,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .category-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
 .category-bar-row .cat-name { width: 78px; flex-shrink: 0; color: var(--text-secondary); }
 .category-bar-track { flex: 1; height: 8px; background: var(--surface-2); border-radius: var(--radius-pill); overflow: hidden; }
-.category-bar-fill { height: 100%; background: var(--accent); border-radius: var(--radius-pill); }
+.category-bar-fill { height: 100%; background: var(--nook-btn-grad); border-radius: var(--radius-pill); }
 .category-bar-count { width: 22px; text-align: right; color: var(--text-muted); font-size: 12px; }
 
 /* ================= Account page ================= */
@@ -532,6 +534,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
   background: var(--surface-2); display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--accent);
   border: 1px solid var(--border-strong);
+  box-shadow: 0 0 0 3px rgba(201, 242, 75, 0.06), 0 0 14px -4px var(--accent-glow);
 }
 .list-row {
   display: flex; align-items: center; justify-content: space-between;
@@ -541,7 +544,10 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .list-row .row-label { font-size: 14.5px; }
 .category-chip {
   display: inline-flex; align-items: center; gap: 8px;
-  background: var(--surface); border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(214, 240, 150, 0.03), rgba(214, 240, 150, 0) 45%),
+    var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-pill); padding: 8px 8px 8px 14px; font-size: 13px;
 }
 .category-chip button { color: var(--text-muted); display: flex; }
