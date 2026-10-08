@@ -454,61 +454,51 @@ const Api = (() => {
     });
   }
 
-  async function focusStart(id) {
+   async function focusStart(id) {
     await requireUser();
 
-    const { data, error } = await supabase.rpc(
-      'focus_start',
-      {
-        p_task_id: id,
-      }
-    );
+    const { error } = await supabase.rpc('focus_start', {
+      p_task_id: id,
+    });
 
     if (error) {
       handleError(error, 'Could not start the focus session.');
     }
 
-    return data && data.id
-      ? fromSessionRow(data)
-      : data;
+    // The RPC returns the task, while Focus Mode needs
+    // the task's active focus session. Re-fetch it so
+    // activeSession contains the real started_at timestamp.
+    return getTask(id);
   }
 
   async function focusPause(id) {
     await requireUser();
 
-    const { data, error } = await supabase.rpc(
-      'focus_pause',
-      {
-        p_task_id: id,
-      }
-    );
+    const { error } = await supabase.rpc('focus_pause', {
+      p_task_id: id,
+    });
 
     if (error) {
       handleError(error, 'Could not pause the focus session.');
     }
 
-    return data && data.id
-      ? fromSessionRow(data)
-      : data;
+    return getTask(id);
   }
 
   async function focusResume(id) {
     await requireUser();
 
-    const { data, error } = await supabase.rpc(
-      'focus_resume',
-      {
-        p_task_id: id,
-      }
-    );
+    const { error } = await supabase.rpc('focus_resume', {
+      p_task_id: id,
+    });
 
     if (error) {
       handleError(error, 'Could not resume the focus session.');
     }
 
-    return data && data.id
-      ? fromSessionRow(data)
-      : data;
+    // Re-fetch because focus_resume creates the new open
+    // focus session and getTask() supplies activeSession.
+    return getTask(id);
   }
 
   async function removeTask(id) {

@@ -557,10 +557,28 @@ function formatHMS(totalSeconds) {
 // actualMinutes + wall-clock difference since the open session started),
 // not a counter that increments every tick — so it stays correct even
 // if the tab was backgrounded or the phone screen was off for a while.
+// Supabase returns timestamps either as ISO with an offset
+// ("2026-10-08T00:16:56.123456+00:00") or as plain Postgres text
+// ("2026-10-08 00:16:56"). Normalise both to a millisecond epoch.
+// Returns NaN only if the value truly can't be read.
+function parseDbTimestamp(value) {
+  if (!value) return NaN;
+  if (value instanceof Date) return value.getTime();
+  let s = String(value).trim();
+  s = s.replace(' ', 'T');
+  s = s.replace(/(\.\d{3})\d+/, '$1'); // trim microseconds to milliseconds
+  if (!/(Z|[+-]\d{2}:?\d{2})$/i.test(s)) s += 'Z'; // no zone given: treat as UTC
+  return new Date(s).getTime();
+}
+
 function currentElapsedSeconds(task) {
   const priorSeconds = (task.actualMinutes || 0) * 60;
   if (!task.activeSession) return priorSeconds;
-  const startedMs = new Date(task.activeSession.startedAt.replace(' ', 'T') + 'Z').getTime();
+  const startedMs = parseDbTimestamp(task.activeSession.startedAt);
+  if (!Number.isFinite(startedMs)) {
+    console.error('Focus timer: could not read session start time', task.activeSession.startedAt);
+    return priorSeconds;
+  }
   const liveMs = Date.now() - startedMs;
   return priorSeconds + Math.max(liveMs, 0) / 1000;
 }
