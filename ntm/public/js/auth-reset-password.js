@@ -25,7 +25,7 @@ document.getElementById('reset-form').addEventListener('submit', async (e) => {
     const { error } = await supabaseClient.auth.updateUser({ password });
     if (error) throw error;
     form.style.display = 'none';
-    showSuccess('auth-message', 'Password updated. <a href="/login.html">Sign in</a> with your new password.');
+    showSuccess('auth-message', 'Password updated. <a href="login.html">Sign in</a> with your new password.');
   } catch (err) {
     showError('auth-message', err.message || 'Could not update your password. The reset link may have expired — request a new one.');
     setButtonLoading(btn, null, 'Update Password');

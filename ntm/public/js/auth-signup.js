@@ -26,7 +26,7 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     if (data.session) {
       // Email confirmation is off in the Supabase project settings —
       // the account is already signed in.
-      window.location.href = '/index.html';
+      window.location.href = 'index.html';
     } else {
       // Default Supabase behavior: confirmation email sent, no
       // session yet. Nothing to redirect to until they confirm.

@@ -4,11 +4,11 @@
   document.documentElement.style.visibility = 'hidden';
   window.supabaseClient.auth.getSession().then(({ data }) => {
     if (!data || !data.session) {
-      window.location.replace('/login.html');
+      window.location.replace('login.html');
       return;
     }
     document.documentElement.style.visibility = '';
   }).catch(() => {
-    window.location.replace('/login.html');
+    window.location.replace('login.html');
   });
 })();

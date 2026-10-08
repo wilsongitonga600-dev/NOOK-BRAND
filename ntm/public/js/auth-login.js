@@ -10,7 +10,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   try {
     const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    window.location.href = '/index.html';
+    window.location.href = 'index.html';
   } catch (err) {
     showError('auth-message', err.message || 'Could not sign in. Check your email and password.');
     setButtonLoading(btn, null, 'Sign In');
