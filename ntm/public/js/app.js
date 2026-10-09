@@ -6,7 +6,7 @@ const state = {
   categories: [],
   taskFilters: { when: 'today', status: '', priority: '', categoryId: '', search: '' },
   tasksView: 'list',
-  planDate: new Date().toISOString().slice(0, 10),
+  planDate: localDateKey(),
   statsRange: '7d',
   searchOpen: false,
   focusTaskId: null,
@@ -52,6 +52,31 @@ function formatTaskTime(task) {
   const dur = formatMinutes(task.estimatedMinutes);
   if (dur) parts.push(dur);
   return parts.join(' · ');
+}
+
+// Time handling: Supabase stores exact moments (UTC). The app shows and
+// enters times in the device's local time, so dates and clock times are
+// derived from local getters, never by slicing an ISO string.
+function localDateKey(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function isoToLocalDate(iso) {
+  return localDateKey(new Date(iso));
+}
+
+function isoToLocalTime(iso) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+// Local date + clock time typed in the form -> exact moment (ISO, UTC).
+// A date-time string with no offset is read as local time by the browser.
+function localDateTimeToIso(dateStr, timeStr) {
+  return new Date(`${dateStr}T${timeStr}:00`).toISOString();
 }
 
 function formatDueLabel(dueDate) {
@@ -206,7 +231,7 @@ async function renderHome() {
 function groupTasksByDate(tasks) {
   const groups = new Map();
   for (const t of tasks) {
-    const key = t.dueDate || (t.scheduledTime ? t.scheduledTime.slice(0, 10) : null) || 'no-date';
+    const key = t.dueDate || (t.scheduledTime ? isoToLocalDate(t.scheduledTime) : null) || 'no-date';
     const label = key === 'no-date' ? 'No date' : formatDueLabel(key);
     if (!groups.has(label)) groups.set(label, []);
     groups.get(label).push(t);
@@ -238,7 +263,7 @@ function taskCardHtml(t) {
 // "Today"/"Yesterday" mean the same thing throughout the app.
 function historyBucket(completedAt) {
   if (!completedAt) return 'PREVIOUS WEEKS';
-  const dateStr = completedAt.slice(0, 10);
+  const dateStr = isoToLocalDate(completedAt);
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const d = new Date(`${dateStr}T00:00:00`);
   const diffDays = Math.round((today - d) / 86400000);
@@ -261,7 +286,7 @@ function historyMetaLine(t, includeDate) {
   }
   if (t.categoryName) parts.push(t.categoryName);
   if (t.sessionCount > 1) parts.push(`${t.sessionCount} sessions`);
-  if (includeDate && t.completedAt) parts.push(formatDueLabel(t.completedAt.slice(0, 10)));
+  if (includeDate && t.completedAt) parts.push(formatDueLabel(isoToLocalDate(t.completedAt)));
   return parts.join(' · ');
 }
 
@@ -359,11 +384,11 @@ function renderPlanView(tasks, { isToday = true } = {}) {
 function shiftDate(isoDate, days) {
   const d = new Date(`${isoDate}T00:00:00`);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return localDateKey(d);
 }
 
 function todayISODate() {
-  return new Date().toISOString().slice(0, 10);
+  return localDateKey();
 }
 
 async function renderPlan() {
@@ -914,8 +939,21 @@ async function renderAccount() {
         <button class="btn-ghost" id="export-btn">Export</button>
       </div>
       <div class="list-row">
+        <span class="row-label">Import data (JSON)</span>
+        <button class="btn-ghost" id="import-btn">Import</button>
+        <input type="file" id="import-input" accept=".json,application/json" multiple hidden />
+      </div>
+      <div class="list-row">
         <span class="row-label">Clear all tasks</span>
         <button class="btn-danger" id="reset-btn">Reset</button>
+      </div>
+    </div>
+
+    <div class="section-title">Session</div>
+    <div class="card">
+      <div class="list-row">
+        <span class="row-label">Sign out of this device</span>
+        <button class="btn-secondary" style="width:auto;padding:10px 18px;" id="signout-btn">Sign out</button>
       </div>
     </div>
 
@@ -980,9 +1018,42 @@ async function renderAccount() {
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `ntm-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `ntm-export-${localDateKey()}.json`;
       a.click();
       toast('Export downloaded');
+    } catch (err) { toast(err.message, 'error'); }
+  });
+
+  el('#import-btn').addEventListener('click', () => el('#import-input').click());
+
+  el('#import-input').addEventListener('change', async (event) => {
+    const input = event.target;
+    const picked = Array.from(input.files || []);
+    input.value = '';
+    if (!picked.length) return;
+
+    try {
+      const files = await Promise.all(picked.map(async (file) => {
+        let data;
+        try {
+          data = JSON.parse(await file.text());
+        } catch {
+          throw new Error(`${file.name} is not valid JSON.`);
+        }
+        return { name: file.name, data };
+      }));
+
+      const preview = await Api.settings.importData(files, { dryRun: true });
+      const ok = await confirmDialog(
+        `Import ${preview.tasksAdded} tasks, ${preview.sessionsAdded} focus sessions ` +
+        `and ${preview.categoriesAdded} new categories? ` +
+        `${preview.tasksSkipped} tasks already exist and will be skipped.`
+      );
+      if (!ok) return;
+
+      const result = await Api.settings.importData(files);
+      toast(`Imported ${result.tasksAdded} tasks`);
+      await renderAccount();
     } catch (err) { toast(err.message, 'error'); }
   });
 
@@ -994,6 +1065,17 @@ async function renderAccount() {
       toast('All tasks cleared');
       await renderAccount();
     } catch (err) { toast(err.message, 'error'); }
+  });
+
+  el('#signout-btn').addEventListener('click', async () => {
+    const ok = await confirmDialog('Sign out of NOOK on this device?');
+    if (!ok) return;
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+      toast(error.message || 'Could not sign out', 'error');
+      return;
+    }
+    window.location.replace('login.html');
   });
 }
 
@@ -1010,8 +1092,8 @@ async function openTaskModal(existing = null) {
     title: '', description: '', priority: 'medium', categoryId: '',
     dueDate: '', scheduledTime: '', estimatedMinutes: '',
   };
-  const scheduledDate = t.scheduledTime ? t.scheduledTime.slice(0, 10) : '';
-  const scheduledClock = t.scheduledTime ? t.scheduledTime.slice(11, 16) : '';
+  const scheduledDate = t.scheduledTime ? isoToLocalDate(t.scheduledTime) : '';
+  const scheduledClock = t.scheduledTime ? isoToLocalTime(t.scheduledTime) : '';
 
   const root = el('#modal-root');
   root.innerHTML = `
@@ -1115,7 +1197,7 @@ async function openTaskModal(existing = null) {
     const dueDate = el('#f-due').value || null;
     const schedDate = el('#f-sched-date').value;
     const schedTime = el('#f-sched-time').value;
-    const scheduledTime = schedDate ? `${schedDate}T${schedTime || '09:00'}:00` : null;
+    const scheduledTime = schedDate ? localDateTimeToIso(schedDate, schedTime || '09:00') : null;
     const estimatedMinutes = el('#f-est').value ? Number(el('#f-est').value) : null;
 
     const payload = {

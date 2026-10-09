@@ -166,16 +166,25 @@ const Api = (() => {
       .replace(/\./g, '\\.');
   }
 
+  // Local calendar date (YYYY-MM-DD). Never use toISOString() for this:
+  // it returns the UTC date, which is the previous day before 03:00 in Kenya.
+  function localDateKey(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  // Exact moment (ISO, UTC) of local midnight at the start of a day.
+  function localMidnightIso(dayKey) {
+    return new Date(`${dayKey}T00:00:00`).toISOString();
+  }
+
   function getDayRange(day) {
-    const start = `${day}T00:00:00`;
-
-    const date = new Date(`${day}T00:00:00`);
-    date.setDate(date.getDate() + 1);
-
-    const nextDay = date.toISOString().slice(0, 10);
-    const end = `${nextDay}T00:00:00`;
-
-    return { start, end };
+    const start = new Date(`${day}T00:00:00`);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    return { start: start.toISOString(), end: end.toISOString() };
   }
 
   // ------------------------------------------------------------
@@ -209,24 +218,24 @@ const Api = (() => {
         `due_date.eq.${filters.day},scheduled_time.gte.${start},scheduled_time.lt.${end}`
       );
     } else if (filters.when === 'today') {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateKey();
       const { start, end } = getDayRange(today);
 
       query = query.or(
         `due_date.eq.${today},scheduled_time.gte.${start},scheduled_time.lt.${end}`
       );
     } else if (filters.when === 'upcoming') {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateKey();
 
       const tomorrowDate = new Date(`${today}T00:00:00`);
       tomorrowDate.setDate(tomorrowDate.getDate() + 1);
 
-      const tomorrow = tomorrowDate.toISOString().slice(0, 10);
+      const tomorrow = localDateKey(tomorrowDate);
 
       query = query
         .neq('status', 'completed')
         .or(
-          `due_date.gt.${today},scheduled_time.gte.${tomorrow}T00:00:00`
+          `due_date.gt.${today},scheduled_time.gte.${localMidnightIso(tomorrow)}`
         );
     } else if (filters.when === 'done') {
       query = query.eq('status', 'completed');
@@ -806,6 +815,233 @@ const Api = (() => {
     return (data || []).map(fromTaskRow);
   }
 
+
+  // ------------------------------------------------------------
+  // IMPORT
+  // ------------------------------------------------------------
+  // Merges one or more JSON files into the signed-in account.
+  // Accepts the app's own export ({ tasks, categories }) and the raw
+  // phone database tables (arrays of rows: tasks, categories,
+  // focus_sessions, settings). Each file is recognised by its contents.
+  //
+  // Merge rules:
+  //  - categories match existing ones by name (case-insensitive); missing ones are created
+  //  - a task is skipped if one with the same title and created time already exists
+  //  - focus sessions are imported only for tasks that are newly imported
+  //  - a session that was never closed is imported as zero minutes
+  //  - times without a timezone are read as phone local time (LOCAL_OFFSET)
+
+  const LOCAL_OFFSET = '+03:00';
+
+  function pick(obj, camelKey, snakeKey) {
+    if (obj[camelKey] !== undefined) return obj[camelKey];
+    return obj[snakeKey];
+  }
+
+  function toIsoTime(value) {
+    if (value === null || value === undefined || value === '') return null;
+    let s = String(value).trim().replace(' ', 'T');
+    s = s.replace(/(\.\d{3})\d+/, '$1');
+    if (!/(Z|[+-]\d{2}:?\d{2})$/i.test(s)) s += LOCAL_OFFSET;
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+
+  function taskKey(title, isoTime) {
+    return `${String(title).trim()}|${String(isoTime).slice(0, 19)}`;
+  }
+
+  function detectKind(rows) {
+    if (!Array.isArray(rows)) return 'unknown';
+    if (rows.length === 0) return 'empty';
+    const r = rows[0];
+    if ('task_id' in r || 'started_at' in r) return 'sessions';
+    if ('key' in r && 'value' in r) return 'settings';
+    if ('title' in r || 'status' in r) return 'tasks';
+    if ('name' in r) return 'categories';
+    return 'unknown';
+  }
+
+  function collectImport(files) {
+    const bundle = { tasks: [], categories: [], sessions: [], displayName: null };
+
+    files.forEach(({ name, data }) => {
+      // The app's own export: one object holding tasks and categories.
+      if (data && !Array.isArray(data) && typeof data === 'object') {
+        if (Array.isArray(data.tasks)) bundle.tasks.push(...data.tasks);
+        if (Array.isArray(data.categories)) bundle.categories.push(...data.categories);
+        if (Array.isArray(data.focusSessions)) bundle.sessions.push(...data.focusSessions);
+        if (Array.isArray(data.focus_sessions)) bundle.sessions.push(...data.focus_sessions);
+        if (!Array.isArray(data.tasks) && !Array.isArray(data.categories)) {
+          throw new Error(`${name} does not contain NOOK data.`);
+        }
+        return;
+      }
+
+      const kind = detectKind(data);
+      if (kind === 'tasks') bundle.tasks.push(...data);
+      else if (kind === 'categories') bundle.categories.push(...data);
+      else if (kind === 'sessions') bundle.sessions.push(...data);
+      else if (kind === 'settings') {
+        const row = data.find(s => s.key === 'display_name');
+        if (row && row.value) bundle.displayName = row.value;
+      }
+      else if (kind === 'empty') { /* nothing in this file */ }
+      else throw new Error(`${name} is not a NOOK export.`);
+    });
+
+    const total = bundle.tasks.length + bundle.categories.length + bundle.sessions.length;
+    if (total === 0 && !bundle.displayName) {
+      throw new Error('No NOOK data found in the selected files.');
+    }
+    return bundle;
+  }
+
+  function normalizeTask(t) {
+    return {
+      oldId: t.id,
+      title: (t.title || '').trim(),
+      description: t.description ?? null,
+      status: t.status || 'not_started',
+      priority: t.priority || 'medium',
+      oldCategoryId: pick(t, 'categoryId', 'category_id') ?? null,
+      dueDate: pick(t, 'dueDate', 'due_date') ?? null,
+      scheduledTime: toIsoTime(pick(t, 'scheduledTime', 'scheduled_time')),
+      estimatedMinutes: pick(t, 'estimatedMinutes', 'estimated_minutes') ?? null,
+      actualMinutes: pick(t, 'actualMinutes', 'actual_minutes') ?? null,
+      position: t.position ?? 0,
+      createdAt: toIsoTime(pick(t, 'createdAt', 'created_at')) || new Date().toISOString(),
+      completedAt: toIsoTime(pick(t, 'completedAt', 'completed_at')),
+    };
+  }
+
+  function normalizeSession(s) {
+    return {
+      oldTaskId: pick(s, 'taskId', 'task_id'),
+      startedAt: toIsoTime(pick(s, 'startedAt', 'started_at')),
+      endedAt: toIsoTime(pick(s, 'endedAt', 'ended_at')),
+      durationMinutes: pick(s, 'durationMinutes', 'duration_minutes') ?? null,
+      createdAt: toIsoTime(pick(s, 'createdAt', 'created_at')),
+    };
+  }
+
+  async function importData(files, { dryRun = false } = {}) {
+    const user = await requireUser();
+    const bundle = collectImport(files);
+
+    const [existingTasks, existingCategories] = await Promise.all([
+      listTasks({ when: 'all' }),
+      listCategories(),
+    ]);
+
+    // Categories: match by name, create the missing ones.
+    const categoryByName = new Map(
+      existingCategories.map(c => [c.name.toLowerCase(), c])
+    );
+    const categoryMap = new Map(); // old id -> category object
+    let categoriesAdded = 0;
+
+    for (const raw of bundle.categories) {
+      const name = (raw.name || '').trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      let category = categoryByName.get(key);
+      if (!category) {
+        categoriesAdded++;
+        category = dryRun
+          ? { id: null, name }
+          : await createCategory({ name, color: raw.color ?? null });
+        categoryByName.set(key, category);
+      }
+      categoryMap.set(raw.id, category);
+    }
+
+    // Tasks: skip anything that already exists.
+    const existingKeys = new Set(
+      existingTasks.map(t => taskKey(t.title, t.createdAt))
+    );
+    const newTasks = [];
+    let tasksSkipped = 0;
+
+    for (const raw of bundle.tasks) {
+      const t = normalizeTask(raw);
+      if (!t.title) { tasksSkipped++; continue; }
+      const key = taskKey(t.title, t.createdAt);
+      if (existingKeys.has(key)) { tasksSkipped++; continue; }
+      existingKeys.add(key);
+      newTasks.push(t);
+    }
+
+    const taskIdMap = new Map(); // old task id -> new task id
+    const newOldIds = new Set(newTasks.map(t => t.oldId));
+
+    if (!dryRun) {
+      for (const t of newTasks) {
+        const category = t.oldCategoryId != null ? categoryMap.get(t.oldCategoryId) : null;
+        const { data, error } = await supabase
+          .from('tasks')
+          .insert({
+            user_id: user.id,
+            title: t.title,
+            description: t.description,
+            status: t.status,
+            priority: t.priority,
+            category_id: category?.id ?? null,
+            due_date: t.dueDate,
+            scheduled_time: t.scheduledTime,
+            estimated_minutes: t.estimatedMinutes,
+            actual_minutes: t.actualMinutes,
+            position: t.position,
+            created_at: t.createdAt,
+            completed_at: t.status === 'completed' ? (t.completedAt || t.createdAt) : null,
+          })
+          .select('id')
+          .single();
+
+        if (error) handleError(error, `Could not import "${t.title}".`);
+        taskIdMap.set(t.oldId, data.id);
+      }
+    }
+
+    // Focus sessions: only for tasks that were just imported.
+    const sessionRows = [];
+    for (const raw of bundle.sessions) {
+      const s = normalizeSession(raw);
+      if (!newOldIds.has(s.oldTaskId) || !s.startedAt) continue;
+
+      let endedAt = s.endedAt;
+      let minutes = s.durationMinutes;
+      if (!endedAt) { endedAt = s.startedAt; minutes = 0; }
+
+      sessionRows.push({
+        user_id: user.id,
+        task_id: taskIdMap.get(s.oldTaskId),
+        started_at: s.startedAt,
+        ended_at: endedAt,
+        duration_minutes: minutes ?? 0,
+        created_at: s.createdAt || s.startedAt,
+      });
+    }
+
+    if (!dryRun && sessionRows.length > 0) {
+      const { error } = await supabase.from('focus_sessions').insert(sessionRows);
+      if (error) handleError(error, 'Could not import focus sessions.');
+    }
+
+    if (!dryRun && bundle.displayName) {
+      await updateSettings({ displayName: bundle.displayName });
+    }
+
+    return {
+      dryRun,
+      tasksAdded: newTasks.length,
+      tasksSkipped,
+      categoriesAdded,
+      sessionsAdded: sessionRows.length,
+      displayName: bundle.displayName,
+    };
+  }
+
   // ------------------------------------------------------------
   // PUBLIC API
   // ------------------------------------------------------------
@@ -841,6 +1077,7 @@ const Api = (() => {
       get: getSettings,
       update: updateSettings,
       exportData,
+      importData,
       reset: resetSettings,
     },
   };
