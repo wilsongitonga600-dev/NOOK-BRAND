@@ -157,6 +157,84 @@ const Charts = (() => {
     </svg>`;
   }
 
+
+  // Count y-axis for task counts. Steps are even so the midpoint tick is a whole number.
+  function countNiceMax(values) {
+    const max = Math.max(...values, 0);
+    if (max <= 0) return 4;
+    const steps = [2, 4, 6, 8, 10, 12, 16, 20, 24, 30, 40, 50, 60, 80, 100, 150, 200];
+    return steps.find((s) => s >= max) || Math.ceil(max / 50) * 50;
+  }
+
+  // Area/line trend with labelled axes, matching the Focus Time chart:
+  // a fixed "Tasks" y-axis on the left, day labels underneath, and a
+  // sideways-scrolling plot when there are more than 10 days.
+  function trendChart(values, labels, { height = 160, color = 'var(--accent)', unit = 'Tasks' } = {}) {
+    const n = values.length;
+    const scrolls = n > 10;
+    const colWidth = scrolls ? 22 : 40;
+    const chartWidth = n * colWidth;
+    const bottom = height - 20;
+    const topPad = 14;
+    const plotHeight = bottom - topPad;
+    const niceMax = countNiceMax(values);
+    const labelStep = n > 12 ? Math.ceil(n / 10) : 1;
+
+    const xOf = (i) => i * colWidth + colWidth / 2;
+    const yOf = (v) => bottom - (v / niceMax) * plotHeight;
+    const pts = values.map((v, i) => [xOf(i), yOf(v)]);
+
+    // Smooth curve through the points, same curve style as the rest of the app.
+    let path = `M ${pts[0][0]},${pts[0][1]}`;
+    for (let i = 1; i < pts.length; i += 1) {
+      const [px, py] = pts[i - 1];
+      const [cx, cy] = pts[i];
+      const mx = (px + cx) / 2;
+      path += ` Q ${px},${py} ${mx},${(py + cy) / 2} T ${cx},${cy}`;
+    }
+    const areaPath = `${path} L ${xOf(n - 1)},${bottom} L ${xOf(0)},${bottom} Z`;
+
+    const gridTicks = [0, 0.5, 1].map((f) => ({
+      y: bottom - f * plotHeight,
+      label: String(Math.round(niceMax * f)),
+    }));
+    const gridlines = gridTicks.map((t) =>
+      `<line x1="0" y1="${t.y.toFixed(1)}" x2="${chartWidth}" y2="${t.y.toFixed(1)}" stroke="var(--border)" stroke-width="1" stroke-dasharray="2 4"></line>`
+    ).join('');
+
+    const dots = pts.map(([x, y], i) => (values[i] > 0
+      ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="${color}"></circle>`
+      : '')).join('');
+
+    const labelEls = (labels || []).map((l, i) => {
+      if (i % labelStep !== 0) return '';
+      return `<text x="${xOf(i).toFixed(1)}" y="${height - 4}" dominant-baseline="central" font-size="9.5" fill="var(--text-muted)" text-anchor="middle">${l}</text>`;
+    }).join('');
+
+    const plotSvg = `<svg viewBox="0 0 ${chartWidth} ${height}" width="${scrolls ? chartWidth : '100%'}" height="${height}" style="display:block;${scrolls ? `min-width:${chartWidth}px;` : ''}" role="img" aria-label="${unit} completed per day">
+      <defs>
+        <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      ${gridlines}
+      <path d="${areaPath}" fill="url(#trendFill)"></path>
+      <path d="${path}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round"></path>
+      ${dots}${labelEls}
+    </svg>`;
+
+    const axisSvg = `<svg viewBox="0 0 34 ${height}" width="34" height="${height}" style="display:block;flex-shrink:0;">
+      <text x="2" y="${topPad - 6}" font-size="9" fill="var(--text-muted)" text-anchor="start">${unit}</text>
+      ${gridTicks.map((t) => `<text x="28" y="${t.y.toFixed(1)}" dominant-baseline="central" font-size="9.5" fill="var(--text-muted)" text-anchor="end">${t.label}</text>`).join('')}
+    </svg>`;
+
+    return `<div style="display:flex;min-width:0;">
+      ${axisSvg}
+      <div style="overflow-x:${scrolls ? 'auto' : 'hidden'};-webkit-overflow-scrolling:touch;flex:1;min-width:0;">${plotSvg}</div>
+    </div>`;
+  }
+
   // Category palette — tonal variations within the olive/lime family
   // (varying lightness/saturation of one hue range), not an arbitrary
   // rainbow. Per NTM's color rules, category charts should still read
@@ -350,7 +428,7 @@ const Charts = (() => {
   }
 
   return {
-    sparkline, barChart, areaChart, donutRing, donutBreakdown, concentricRings,
+    sparkline, barChart, areaChart, trendChart, donutRing, donutBreakdown, concentricRings,
     STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, PRIORITY_LABELS_CHART, CATEGORY_PALETTE,
   };
 })();

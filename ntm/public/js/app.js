@@ -718,7 +718,8 @@ async function renderStats() {
     return;
   }
 
-  const hasAnyData = data.totals.totalCompleted > 0;
+  const hasCompletionData = data.totals.totalCompleted > 0;
+  const hasFocusData = data.totals.totalFocusMinutes > 0;
   const dayLabels = data.labels || data.days;
   const cmp = data.comparison || {};
 
@@ -765,7 +766,7 @@ async function renderStats() {
       </div>
       <div class="stat-card">
         <div class="stat-label">Rate</div>
-        <div style="display:flex;justify-content:center;margin-top:2px;">${Charts.donutRing(data.totals.completionRate, { size: 56, stroke: 6, color: 'var(--chart-rate)' })}</div>
+        <div style="display:flex;justify-content:center;margin-top:2px;">${data.totals.completionRate === null ? '<div class="stat-value" style="font-size:20px;">—</div>' : Charts.donutRing(data.totals.completionRate, { size: 56, stroke: 6, color: 'var(--chart-rate)' })}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Avg / Day</div>
@@ -777,12 +778,12 @@ async function renderStats() {
       <div class="chart-card-header">
         <span class="label" style="font-size:13px;color:var(--text-secondary);font-weight:500;">Productivity Trend</span>
       </div>
-      ${hasAnyData ? Charts.areaChart(data.completedByDay, { color: 'var(--chart-productivity)' }) : `<div class="empty-state" style="padding:24px 0;"><p style="margin:0;">No productivity data yet.<br>Complete a few tasks and NTM will begin tracking your progress.</p></div>`}
+      ${hasCompletionData ? Charts.trendChart(data.completedByDay, dayLabels, { color: 'var(--chart-productivity)', unit: 'Tasks' }) : `<div class="empty-state" style="padding:24px 0;"><p style="margin:0;">No productivity data yet.<br>Complete a few tasks and NTM will begin tracking your progress.</p></div>`}
     </div>
 
     <div class="card chart-card">
       <div class="chart-card-header"><span class="label" style="font-size:13px;color:var(--text-secondary);font-weight:500;">Focus Time</span></div>
-      ${hasAnyData ? Charts.barChart(data.focusMinutesByDay, dayLabels) : `<div class="tiny">No focus time logged yet.</div>`}
+      ${hasFocusData ? Charts.barChart(data.focusMinutesByDay, dayLabels) : `<div class="tiny">No focus time logged yet.</div>`}
     </div>
 
     <div class="card chart-card">
