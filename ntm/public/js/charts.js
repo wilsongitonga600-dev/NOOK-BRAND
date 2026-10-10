@@ -26,6 +26,94 @@ const Charts = (() => {
     </svg>`;
   }
 
+
+  const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const LABEL_FONT = 9.5;
+  const LINE_STEP = 11;
+
+  // Reads the calendar parts and time straight from a stats label such as
+  // "2026-10-05T00:00:00". No Date object and no timezone conversion, so the
+  // stored value is shown exactly as it was bucketed.
+  function parseStatsLabel(l) {
+    const m = String(l).match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+    if (!m) return null;
+    return { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]), hh: m[4] || '00', mm: m[5] || '00' };
+  }
+
+  // Human-readable axis labels.
+  //  withTime false (30D / 90D / ALL): "Oct 5"            (one line)
+  //  withTime true  (7D):              ["Mon", "5 Oct", "00:00"]  (three lines)
+  // The year is added only when the labels span years or are not this year.
+  function formatDateLabels(labels, { withTime = false } = {}) {
+    const list = (labels || []).map((l) => String(l));
+    const parts = list.map(parseStatsLabel);
+    const years = new Set(parts.filter(Boolean).map((p) => p.y));
+    const thisYear = new Date().getFullYear();
+    const showYear = years.size > 1 || [...years].some((y) => y !== thisYear);
+
+    return parts.map((p, i) => {
+      if (!p) return list[i];
+      if (withTime) {
+        const weekday = WEEKDAY_SHORT[new Date(Date.UTC(p.y, p.m - 1, p.d)).getUTCDay()];
+        const date = `${p.d} ${MONTH_SHORT[p.m - 1]}${showYear ? ` ${p.y}` : ''}`;
+        return [weekday, date, `${p.hh}:${p.mm}`];
+      }
+      const short = `${MONTH_SHORT[p.m - 1]} ${p.d}`;
+      return showYear ? `${short}, ${p.y}` : short;
+    });
+  }
+
+  // Longest single line across all labels (multi-line labels count per line).
+  function longestLine(labels) {
+    let longest = 0;
+    (labels || []).forEach((l) => {
+      (Array.isArray(l) ? l : [l]).forEach((t) => { longest = Math.max(longest, String(t).length); });
+    });
+    return longest;
+  }
+
+  // Horizontal spacing between data points. Single-line labels keep the
+  // standard 8px gap. Multi-line (7D) labels widen the gap so each line fits.
+  function gapFor(labels) {
+    if (!(labels || []).some(Array.isArray)) return 8;
+    return Math.max(8, Math.ceil(longestLine(labels) * 5.4 + 6 - 16));
+  }
+
+  // How many labels to skip so the drawn ones never overlap.
+  function labelStepFor(labels, n, slotWidth) {
+    const needed = Math.ceil((longestLine(labels) * 5.2 + 4) / slotWidth);
+    const byCount = n > 12 ? Math.ceil(n / 10) : 1;
+    return Math.max(byCount, needed, 1);
+  }
+
+  // Keeps the first and last labels inside the chart so they aren't cut off.
+  function edgeLabel(i, n, x, chartWidth) {
+    if (i === 0) return { x: 0, anchor: 'start' };
+    if (i === n - 1) return { x: chartWidth, anchor: 'end' };
+    return { x, anchor: 'middle' };
+  }
+
+  // Vertical layout shared by the bar and trend charts. Multi-line labels
+  // need a taller band under the plot; the SVG grows to keep the plot the
+  // same height.
+  function chartLayout(n, labels, height) {
+    const lines = (labels || []).reduce((mx, l) => Math.max(mx, Array.isArray(l) ? l.length : 1), 1);
+    const band = lines > 1 ? 6 + lines * LINE_STEP : 16;
+    const H = height + (band - 16);
+    const bottom = H - band;
+    const baseY = lines > 1 ? bottom + 10 : bottom + 13;
+    return { H, bottom, baseY };
+  }
+
+  // One axis label, one or more lines, drawn at the same font as the rest of the chart.
+  function axisLabel(label, x, baseY, anchor) {
+    const lines = Array.isArray(label) ? label : [label];
+    const tspans = lines.map((t, k) =>
+      `<tspan x="${x.toFixed(1)}" dy="${k === 0 ? 0 : LINE_STEP}">${t}</tspan>`).join('');
+    return `<text x="${x.toFixed(1)}" y="${baseY.toFixed(1)}" font-size="${LABEL_FONT}" fill="var(--text-muted)" text-anchor="${anchor}">${tspans}</text>`;
+  }
+
   function niceHourMax(values) {
     const maxMinutes = Math.max(...values, 0);
     if (maxMinutes <= 0) return 60; // default to a 1-hour scale when there's no data
@@ -46,14 +134,14 @@ const Charts = (() => {
   // legible instead of squeezing into one width.
   function barChart(values, labels, { height = 140, minBarWidth = 16, color = 'var(--chart-focus)', showYAxis = true } = {}) {
     const n = values.length;
-    const barGap = 8;
+    const barGap = gapFor(labels);
     const barWidth = minBarWidth;
     const chartWidth = n * barWidth + (n - 1) * barGap;
-    const bottom = height - 20;
+    const { H, bottom, baseY } = chartLayout(n, labels, height);
     const topPad = 14;
     const plotHeight = bottom - topPad;
     const niceMax = niceHourMax(values);
-    const labelStep = n > 12 ? Math.ceil(n / 10) : 1;
+    const labelStep = labelStepFor(labels, n, barWidth + barGap);
 
     // Isometric 3D box per bar — a diamond top cap plus shaded left/right
     // faces, adapted from a reference isometric bar chart design. Every
@@ -86,11 +174,11 @@ const Charts = (() => {
 
     const labelEls = (labels || []).map((l, i) => {
       if (i % labelStep !== 0) return '';
-      const x = i * (barWidth + barGap) + barWidth / 2;
-      return `<text x="${x.toFixed(1)}" y="${height - 4}" dominant-baseline="central" font-size="9.5" fill="var(--text-muted)" text-anchor="middle">${l}</text>`;
+      const e = edgeLabel(i, n, i * (barWidth + barGap) + barWidth / 2, chartWidth);
+      return axisLabel(l, e.x, baseY, e.anchor);
     }).join('');
 
-    const plotSvg = `<svg viewBox="0 0 ${chartWidth} ${height}" width="${chartWidth}" height="${height}" style="display:block;min-width:${chartWidth}px;">
+    const plotSvg = `<svg viewBox="0 0 ${chartWidth} ${H}" width="${chartWidth}" height="${H}" style="display:block;min-width:${chartWidth}px;">
       ${bars}${labelEls}
     </svg>`;
 
@@ -108,7 +196,7 @@ const Charts = (() => {
     // tick's y-coordinate regardless of font metrics — a fixed pixel
     // offset (the old approach) doesn't render consistently across
     // browsers/WebViews and can look like the labels collide.
-    const axisSvg = `<svg viewBox="0 0 ${axisWidth} ${height}" width="${axisWidth}" height="${height}" style="display:block;flex-shrink:0;">
+    const axisSvg = `<svg viewBox="0 0 ${axisWidth} ${H}" width="${axisWidth}" height="${H}" style="display:block;flex-shrink:0;">
       ${ticks.map((t) => `<text x="${axisWidth - 6}" y="${t.y.toFixed(1)}" dominant-baseline="central" font-size="9.5" fill="var(--text-muted)" text-anchor="end">${t.label}</text>`).join('')}
     </svg>`;
 
@@ -116,7 +204,7 @@ const Charts = (() => {
     // with the bars) but are computed from the same tick set as the
     // fixed axis labels alongside them.
     const gridlines = ticks.map((t) => `<line x1="0" y1="${t.y.toFixed(1)}" x2="${chartWidth}" y2="${t.y.toFixed(1)}" stroke="var(--border)" stroke-width="1" stroke-dasharray="2 4"></line>`).join('');
-    const plotSvgWithGrid = `<svg viewBox="0 0 ${chartWidth} ${height}" width="${chartWidth}" height="${height}" style="display:block;min-width:${chartWidth}px;">
+    const plotSvgWithGrid = `<svg viewBox="0 0 ${chartWidth} ${H}" width="${chartWidth}" height="${H}" style="display:block;min-width:${chartWidth}px;">
       ${gridlines}${bars}${labelEls}
     </svg>`;
 
@@ -169,18 +257,25 @@ const Charts = (() => {
   // Area/line trend with labelled axes, matching the Focus Time chart:
   // a fixed "Tasks" y-axis on the left, day labels underneath, and a
   // sideways-scrolling plot when there are more than 10 days.
+  let trendCounter = 0;
+
+  // Productivity Trend. Same grid, label rules and scrolling as the Focus
+  // Time chart, so the two X-axes line up. Each chart gets its own gradient
+  // ID, and the shading uses fixed coordinates, so it always renders.
   function trendChart(values, labels, { height = 160, color = 'var(--accent)', unit = 'Tasks' } = {}) {
     const n = values.length;
+    if (n === 0) return '';
+    const barWidth = 16;
+    const barGap = gapFor(labels);
+    const slot = barWidth + barGap;
+    const chartWidth = n * barWidth + (n - 1) * barGap;
+    const { H, bottom, baseY } = chartLayout(n, labels, height);
     const scrolls = n > 10;
-    const colWidth = scrolls ? 22 : 40;
-    const chartWidth = n * colWidth;
-    const bottom = height - 20;
     const topPad = 14;
     const plotHeight = bottom - topPad;
     const niceMax = countNiceMax(values);
-    const labelStep = n > 12 ? Math.ceil(n / 10) : 1;
-
-    const xOf = (i) => i * colWidth + colWidth / 2;
+    const labelStep = labelStepFor(labels, n, slot);
+    const xOf = (i) => i * slot + barWidth / 2;
     const yOf = (v) => bottom - (v / niceMax) * plotHeight;
     const pts = values.map((v, i) => [xOf(i), yOf(v)]);
 
@@ -194,6 +289,8 @@ const Charts = (() => {
     }
     const areaPath = `${path} L ${xOf(n - 1)},${bottom} L ${xOf(0)},${bottom} Z`;
 
+    const gradId = `trendFill${++trendCounter}`;
+
     const gridTicks = [0, 0.5, 1].map((f) => ({
       y: bottom - f * plotHeight,
       label: String(Math.round(niceMax * f)),
@@ -203,35 +300,36 @@ const Charts = (() => {
     ).join('');
 
     const dots = pts.map(([x, y], i) => (values[i] > 0
-      ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="${color}"></circle>`
+      ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" style="fill:${color}"></circle>`
       : '')).join('');
 
     const labelEls = (labels || []).map((l, i) => {
       if (i % labelStep !== 0) return '';
-      return `<text x="${xOf(i).toFixed(1)}" y="${height - 4}" dominant-baseline="central" font-size="9.5" fill="var(--text-muted)" text-anchor="middle">${l}</text>`;
+      const e = edgeLabel(i, n, xOf(i), chartWidth);
+      return axisLabel(l, e.x, baseY, e.anchor);
     }).join('');
 
-    const plotSvg = `<svg viewBox="0 0 ${chartWidth} ${height}" width="${scrolls ? chartWidth : '100%'}" height="${height}" style="display:block;${scrolls ? `min-width:${chartWidth}px;` : ''}" role="img" aria-label="${unit} completed per day">
+    const plotSvg = `<svg viewBox="0 0 ${chartWidth} ${H}" width="${chartWidth}" height="${H}" style="display:block;min-width:${chartWidth}px;" role="img" aria-label="${unit} completed per day">
       <defs>
-        <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${color}" stop-opacity="0.35"/>
-          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        <linearGradient id="${gradId}" gradientUnits="userSpaceOnUse" x1="0" y1="${topPad}" x2="0" y2="${bottom}">
+          <stop offset="0" style="stop-color:${color};stop-opacity:0.35"></stop>
+          <stop offset="1" style="stop-color:${color};stop-opacity:0"></stop>
         </linearGradient>
       </defs>
       ${gridlines}
-      <path d="${areaPath}" fill="url(#trendFill)"></path>
-      <path d="${path}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round"></path>
+      <path d="${areaPath}" fill="url(#${gradId})"></path>
+      <path d="${path}" fill="none" style="stroke:${color}" stroke-width="2.4" stroke-linecap="round"></path>
       ${dots}${labelEls}
     </svg>`;
 
-    const axisSvg = `<svg viewBox="0 0 34 ${height}" width="34" height="${height}" style="display:block;flex-shrink:0;">
+    const axisSvg = `<svg viewBox="0 0 34 ${H}" width="34" height="${H}" style="display:block;flex-shrink:0;">
       <text x="2" y="${topPad - 6}" font-size="9" fill="var(--text-muted)" text-anchor="start">${unit}</text>
       ${gridTicks.map((t) => `<text x="28" y="${t.y.toFixed(1)}" dominant-baseline="central" font-size="9.5" fill="var(--text-muted)" text-anchor="end">${t.label}</text>`).join('')}
     </svg>`;
 
     return `<div style="display:flex;min-width:0;">
       ${axisSvg}
-      <div style="overflow-x:${scrolls ? 'auto' : 'hidden'};-webkit-overflow-scrolling:touch;flex:1;min-width:0;">${plotSvg}</div>
+      <div style="overflow-x:${scrolls ? 'auto' : 'visible'};-webkit-overflow-scrolling:touch;flex:1;min-width:0;">${plotSvg}</div>
     </div>`;
   }
 
@@ -428,7 +526,7 @@ const Charts = (() => {
   }
 
   return {
-    sparkline, barChart, areaChart, trendChart, donutRing, donutBreakdown, concentricRings,
+    sparkline, barChart, areaChart, trendChart, formatDateLabels, donutRing, donutBreakdown, concentricRings,
     STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, PRIORITY_LABELS_CHART, CATEGORY_PALETTE,
   };
 })();

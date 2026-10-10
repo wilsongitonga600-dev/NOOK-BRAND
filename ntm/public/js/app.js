@@ -720,7 +720,7 @@ async function renderStats() {
 
   const hasCompletionData = data.totals.totalCompleted > 0;
   const hasFocusData = data.totals.totalFocusMinutes > 0;
-  const dayLabels = data.labels || data.days;
+  const dayLabels = Charts.formatDateLabels(data.labels || data.days, { withTime: state.statsRange === '7d' });
   const cmp = data.comparison || {};
 
   // Build the multi-ring breakdown from whatever real data exists —
