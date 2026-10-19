@@ -126,7 +126,9 @@ async function navigateTo(page) {
   state.page = page;
   setActiveNav(page);
   window.location.hash = page;
-  pageContent().innerHTML = '<div class="tiny" style="padding:40px 0;text-align:center;">Loading…</div>';
+  pageContent().innerHTML = '<div class="breathing-loader-wrap"><div class="page-loader"></div><span class="breathing-loader-label">Loading<span class="loader-ellipsis">…</span></span></div>';
+  const loaderHost = pageContent().querySelector('.page-loader');
+  if (window.BreathingLoader && loaderHost) BreathingLoader.mount(loaderHost, { sphereSize: 60 });
   try {
     if (page === 'home') await renderHome();
     else if (page === 'tasks') await renderTasks();
@@ -1211,6 +1213,7 @@ async function openTaskModal(existing = null) {
       estimatedMinutes,
     };
 
+    const submitButton = el('#task-form button[type="submit"]');
     try {
       if (existing) {
         await Api.tasks.update(existing.id, payload);
@@ -1223,6 +1226,8 @@ async function openTaskModal(existing = null) {
       await refreshCurrentPage();
     } catch (err) {
       el('#modal-error').innerHTML = errorBanner(err.message);
+      submitButton.disabled = false;
+      submitButton.innerHTML = originalButtonContent;
     }
   });
 }
